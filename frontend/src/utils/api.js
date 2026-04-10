@@ -639,6 +639,38 @@ export const adminAPI = {
     return apiRequest(url.href.replace(API_BASE_URL, ''));
   },
   reviewInternshipApplication: (applicationId, data) => api.patch(`/internships/applications/${applicationId}/review`, data),
+
+  // Panel Management APIs
+  getPanelConfiguration: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/panels/config${queryString ? '?' + queryString : ''}`);
+  },
+  setPanelConfiguration: (academicYear, data) => api.post(`/panels/config/${academicYear}`, data),
+  generatePanels: (data) => api.post('/panels/generate', data),
+  getPanelsBySemester: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/panels/semester${queryString ? '?' + queryString : ''}`);
+  },
+  getPanelDetails: (panelId) => api.get(`/panels/${panelId}`),
+  updatePanelMembers: (panelId, data) => api.put(`/panels/${panelId}/members`, data),
+  rotateConveyers: (data) => api.post('/panels/rotate-conveyers', data),
+  getPanelLoadDistribution: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/panels/load-distribution${queryString ? '?' + queryString : ''}`);
+  },
+  deletePanel: (panelId) => api.delete(`/panels/${panelId}`),
+  getFacultyPanels: (facultyId) => api.get(`/panels/faculty/${facultyId}/panels`),
+  getFacultyEvaluations: (facultyId, params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/panels/faculty/${facultyId}/evaluations${queryString ? '?' + queryString : ''}`);
+  },
+  submitEvaluationMarks: (panelId, groupId, data) => api.post(`/panels/${panelId}/group/${groupId}/marks`, data),
+  getEvaluationStatus: (panelId, groupId) => api.get(`/panels/${panelId}/group/${groupId}/evaluation-status`),
+  getSemesterEvaluations: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/panels/semester-evaluations${queryString ? '?' + queryString : ''}`);
+  },
+  getGroupEvaluationMarks: (groupId) => api.get(`/panels/group/${groupId}/marks`),
 };
 
 // Project APIs (shared)
