@@ -30,11 +30,11 @@ const EvaluationSubmission = () => {
     }
   };
 
-  const handleSelectEvaluation = (eval) => {
-    setSelectedEval(eval);
+  const handleSelectEvaluation = (evaluation) => {
+    setSelectedEval(evaluation);
     setFormData({
-      marksObtained: eval.marksObtained || '',
-      comments: eval.comments || ''
+      marksObtained: evaluation.marksObtained || '',
+      comments: evaluation.comments || ''
     });
   };
 
@@ -85,18 +85,18 @@ const EvaluationSubmission = () => {
     }
   };
 
-  const getEvaluationStatus = (eval) => {
-    if (eval.status === 'submitted') {
+  const getEvaluationStatus = (evaluation) => {
+    if (evaluation.status === 'submitted') {
       return { label: '✓ Submitted', color: 'bg-green-100 text-green-700' };
-    } else if (eval.status === 'draft') {
+    } else if (evaluation.status === 'draft') {
       return { label: '📝 Draft', color: 'bg-yellow-100 text-yellow-700' };
     } else {
       return { label: '⏱ Pending', color: 'bg-gray-100 text-gray-700' };
     }
   };
 
-  const getRole = (eval) => {
-    return eval.role === 'conveyer' ? 'Panel Conveyer' : 'Panel Member';
+  const getRole = (evaluation) => {
+    return evaluation.role === 'conveyer' ? 'Panel Conveyer' : 'Panel Member';
   };
 
   if (isLoading) {
@@ -144,21 +144,21 @@ const EvaluationSubmission = () => {
                   <h2 className="text-lg font-semibold">Evaluations ({evaluations.length})</h2>
                 </div>
                 <div className="divide-y max-h-96 overflow-y-auto">
-                  {evaluations.map((eval) => {
-                    const status = getEvaluationStatus(eval);
+                  {evaluations.map((evaluation) => {
+                    const status = getEvaluationStatus(evaluation);
                     return (
                       <button
-                        key={eval._id}
-                        onClick={() => handleSelectEvaluation(eval)}
+                        key={evaluation._id}
+                        onClick={() => handleSelectEvaluation(evaluation)}
                         className={`w-full px-6 py-4 text-left hover:bg-blue-50 transition ${
-                          selectedEval?._id === eval._id ? 'bg-blue-100 border-l-4 border-blue-600' : ''
+                          selectedEval?._id === evaluation._id ? 'bg-blue-100 border-l-4 border-blue-600' : ''
                         }`}
                       >
                         <div className="space-y-1">
-                          <h3 className="font-semibold text-gray-900">{eval.groupCode}</h3>
-                          <p className="text-xs text-gray-600">{eval.panelCode}</p>
+                          <h3 className="font-semibold text-gray-900">{evaluation.groupCode}</h3>
+                          <p className="text-xs text-gray-600">{evaluation.panelCode}</p>
                           <div className="flex items-center justify-between pt-2">
-                            <span className="text-xs text-gray-600">{getRole(eval)}</span>
+                            <span className="text-xs text-gray-600">{getRole(evaluation)}</span>
                             <div className={`px-2 py-0.5 rounded text-xs font-medium ${status.color}`}>
                               {status.label}
                             </div>

@@ -641,6 +641,7 @@ export const adminAPI = {
   reviewInternshipApplication: (applicationId, data) => api.patch(`/internships/applications/${applicationId}/review`, data),
 
   // Panel Management APIs
+  checkFacultyAvailability: () => api.get('/panels/faculty-availability'),
   getPanelConfiguration: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return api.get(`/panels/config${queryString ? '?' + queryString : ''}`);
@@ -659,10 +660,11 @@ export const adminAPI = {
     return api.get(`/panels/load-distribution${queryString ? '?' + queryString : ''}`);
   },
   deletePanel: (panelId) => api.delete(`/panels/${panelId}`),
-  getFacultyPanels: (facultyId) => api.get(`/panels/faculty/${facultyId}/panels`),
-  getFacultyEvaluations: (facultyId, params = {}) => {
+  // Faculty endpoints - no need to pass facultyId, uses authenticated user
+  getFacultyPanels: () => api.get('/panels/faculty/panels'),
+  getFacultyEvaluations: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
-    return api.get(`/panels/faculty/${facultyId}/evaluations${queryString ? '?' + queryString : ''}`);
+    return api.get(`/panels/faculty/evaluations${queryString ? '?' + queryString : ''}`);
   },
   submitEvaluationMarks: (panelId, groupId, data) => api.post(`/panels/${panelId}/group/${groupId}/marks`, data),
   getEvaluationStatus: (panelId, groupId) => api.get(`/panels/${panelId}/group/${groupId}/evaluation-status`),

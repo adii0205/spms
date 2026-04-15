@@ -18,8 +18,8 @@ const PanelView = () => {
     try {
       setIsLoading(true);
       const data = await adminAPI.getFacultyPanels();
-      setPanels(data.data || []);
-      setMessage({ type: 'success', text: `Loaded ${data.data?.length || 0} panel assignments` });
+      setPanels(data.data?.panels || []);
+      setMessage({ type: 'success', text: `Loaded ${data.data?.count || 0} panel assignments` });
     } catch (error) {
       handleApiError(error, (msg) => setMessage({ type: 'error', text: msg }));
     } finally {

@@ -5885,6 +5885,37 @@ const deallocateFacultyFromGroup = async (req, res) => {
 // PANEL MANAGEMENT ENDPOINTS
 // ============================================
 
+// Check available faculty by department
+const checkFacultyAvailability = async (req, res) => {
+  try {
+    const faculty = await Faculty.find({ isRetired: false }).lean();
+    
+    const availability = {
+      CSE: 0,
+      ECE: 0,
+      ASH: 0,
+      total: faculty.length
+    };
+
+    faculty.forEach(f => {
+      const dept = f.department || 'CSE';
+      if (availability[dept] !== undefined) {
+        availability[dept]++;
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: availability
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 // Get or Create Panel Configuration for an academic year
 const getPanelConfiguration = async (req, res) => {
   try {
@@ -6222,10 +6253,20 @@ const deletePanel = async (req, res) => {
 // Get panels assigned to a faculty member
 const getFacultyPanels = async (req, res) => {
   try {
-    const { facultyId } = req.params;
+    // Get faculty ID from authenticated user
+    const userId = req.user.id;
+    
+    // Find faculty record associated with this user
+    const faculty = await Faculty.findOne({ user: userId });
+    if (!faculty) {
+      return res.status(404).json({
+        success: false,
+        message: 'Faculty profile not found for this user'
+      });
+    }
 
     const panels = await Panel.find({
-      'members.faculty': facultyId,
+      'members.faculty': faculty._id,
       isActive: true
     })
       .populate('members.faculty', 'fullName email facultyId department');
@@ -6248,10 +6289,21 @@ const getFacultyPanels = async (req, res) => {
 // Get faculty evaluations
 const getFacultyEvaluations = async (req, res) => {
   try {
-    const { facultyId } = req.params;
+    // Get faculty ID from authenticated user
+    const userId = req.user.id;
+    
+    // Find faculty record associated with this user
+    const faculty = await Faculty.findOne({ user: userId });
+    if (!faculty) {
+      return res.status(404).json({
+        success: false,
+        message: 'Faculty profile not found for this user'
+      });
+    }
+    
     const { semester, academicYear } = req.query;
 
-    let query = { 'marksDetails.conveyer.faculty': facultyId };
+    let query = { 'marksDetails.conveyer.faculty': faculty._id };
 
     if (semester) query.semester = parseInt(semester);
     if (academicYear) query.academicYear = academicYear;
@@ -6575,6 +6627,7 @@ module.exports = {
   updateStudentProfile,
   resetStudentPassword,
   // Panel Management functions
+  checkFacultyAvailability,
   getPanelConfiguration,
   setPanelConfiguration,
   generatePanelsForSemester,

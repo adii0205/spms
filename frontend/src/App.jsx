@@ -531,27 +531,27 @@ function AppContent() {
               </Layout>
             </ProtectedRoute>
           } />          {/* Panel Management Routes */}
-          <Route path="/admin/panel-config" element={{
+          <Route path="/admin/panel-config" element={
             <ProtectedRoute allowedRoles={['admin']}>
               <Layout>
                 <PanelConfiguration />
               </Layout>
             </ProtectedRoute>
-          }} />
-          <Route path="/faculty/panels" element={{
+          } />
+          <Route path="/faculty/panels" element={
             <ProtectedRoute allowedRoles={['faculty']}>
               <Layout>
                 <PanelView />
               </Layout>
             </ProtectedRoute>
-          }} />
-          <Route path="/faculty/evaluation" element={{
+          } />
+          <Route path="/faculty/evaluation" element={
             <ProtectedRoute allowedRoles={['faculty']}>
               <Layout>
                 <EvaluationSubmission />
               </Layout>
             </ProtectedRoute>
-          }} />          {/* Shared Routes - Accessible by all authenticated users */}
+          } />          {/* Shared Routes - Accessible by all authenticated users */}
           <Route path="/projects/:projectId" element={
             <ProtectedRoute allowedRoles={['student', 'faculty', 'admin']}>
               <ProjectDetails />

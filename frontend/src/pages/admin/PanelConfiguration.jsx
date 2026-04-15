@@ -4,11 +4,15 @@ import { handleApiError } from '../../utils/errorHandler';
 
 const PanelConfiguration = () => {
   const [academicYear, setAcademicYear] = useState('2025-26');
+  const [semester, setSemester] = useState(5);
   const [config, setConfig] = useState(null);
+  const [panels, setPanels] = useState([]);
+  const [facultyAvailability, setFacultyAvailability] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [validationWarnings, setValidationWarnings] = useState([]);
   const [formData, setFormData] = useState({
     panelSize: 3,
     departmentDistribution: { CSE: 1, ECE: 1, ASH: 1 },
@@ -21,10 +25,17 @@ const PanelConfiguration = () => {
     noConveyerRepeatInSemester: true
   });
 
-  // Fetch configuration on load
+  // Fetch configuration and panels on load
   useEffect(() => {
+    fetchFacultyAvailability();
     fetchConfiguration();
-  }, [academicYear]);
+    fetchPanels();
+  }, [academicYear, semester]);
+
+  // Validate configuration when form data changes
+  useEffect(() => {
+    validateConfiguration();
+  }, [formData, facultyAvailability]);
 
   const fetchConfiguration = async () => {
     try {
@@ -116,22 +127,92 @@ const PanelConfiguration = () => {
   const handleGeneratePanels = async (e) => {
     e.preventDefault();
 
+    // Check for validation warnings
+    if (validationWarnings.length > 0) {
+      setMessage({
+        type: 'error',
+        text: `Cannot generate panels. Fix these issues first:\n${validationWarnings.join('\n')}`
+      });
+      return;
+    }
+
     try {
       setIsGenerating(true);
-      const sem = 5; // Currently generating for Sem 5, can be made dynamic
       const result = await adminAPI.generatePanels({
-        semester: sem,
+        semester: semester,
         academicYear
       });
       setMessage({
         type: 'success',
-        text: `Generated ${result.data.count} panels successfully for Semester ${sem}!`
+        text: `Generated ${result.data.count} panels successfully for Semester ${semester}!`
       });
+      // Fetch and display the generated panels
+      await fetchPanels();
     } catch (error) {
       handleApiError(error, (msg) => setMessage({ type: 'error', text: msg }));
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const fetchPanels = async () => {
+    try {
+      const data = await adminAPI.getPanelsBySemester({ 
+        semester,
+        academicYear
+      });
+      setPanels(data.data?.panels || []);
+    } catch (error) {
+      // Panels might not exist yet, that's okay
+      setPanels([]);
+    }
+  };
+
+  const fetchFacultyAvailability = async () => {
+    try {
+      const data = await adminAPI.checkFacultyAvailability();
+      setFacultyAvailability(data.data);
+    } catch (error) {
+      console.error('Error fetching faculty availability:', error);
+      setFacultyAvailability(null);
+    }
+  };
+
+  const validateConfiguration = () => {
+    const warnings = [];
+    
+    if (!facultyAvailability) {
+      return;
+    }
+
+    const expectedPanels = Math.ceil(formData.totalProfessors / formData.panelSize);
+    const { CSE, ECE, ASH } = formData.departmentDistribution;
+
+    // Check CSE faculty
+    const neededCSE = CSE * expectedPanels;
+    if (facultyAvailability.CSE < neededCSE) {
+      warnings.push(
+        `⚠️ CSE: Need ${neededCSE} faculty (${CSE} per panel × ${expectedPanels} panels), but only ${facultyAvailability.CSE} available`
+      );
+    }
+
+    // Check ECE faculty
+    const neededECE = ECE * expectedPanels;
+    if (facultyAvailability.ECE < neededECE) {
+      warnings.push(
+        `⚠️ ECE: Need ${neededECE} faculty (${ECE} per panel × ${expectedPanels} panels), but only ${facultyAvailability.ECE} available`
+      );
+    }
+
+    // Check ASH faculty
+    const neededASH = ASH * expectedPanels;
+    if (facultyAvailability.ASH < neededASH) {
+      warnings.push(
+        `⚠️ ASH: Need ${neededASH} faculty (${ASH} per panel × ${expectedPanels} panels), but only ${facultyAvailability.ASH} available`
+      );
+    }
+
+    setValidationWarnings(warnings);
   };
 
   const marksTotal = formData.marksDistribution.conveyer + (formData.marksDistribution.member * (formData.panelSize - 1));
@@ -179,6 +260,25 @@ const PanelConfiguration = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="e.g., 2025-26"
                   />
+                </div>
+
+                {/* Semester Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Semester</label>
+                  <select
+                    value={semester}
+                    onChange={(e) => setSemester(parseInt(e.target.value))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value={1}>Semester 1</option>
+                    <option value={2}>Semester 2</option>
+                    <option value={3}>Semester 3</option>
+                    <option value={4}>Semester 4</option>
+                    <option value={5}>Semester 5</option>
+                    <option value={6}>Semester 6</option>
+                    <option value={7}>Semester 7</option>
+                    <option value={8}>Semester 8</option>
+                  </select>
                 </div>
 
                 {/* Panel Size */}
@@ -331,6 +431,49 @@ const PanelConfiguration = () => {
 
             {/* Summary Card */}
             <div className="space-y-6">
+              {/* Faculty Availability */}
+              {facultyAvailability && (
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Faculty Availability</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">CSE:</span>
+                      <span className="font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                        {facultyAvailability.CSE} faculty
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">ECE:</span>
+                      <span className="font-medium bg-purple-100 text-purple-800 px-3 py-1 rounded-full">
+                        {facultyAvailability.ECE} faculty
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">ASH:</span>
+                      <span className="font-medium bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                        {facultyAvailability.ASH} faculty
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <span className="text-gray-600 font-semibold">Total:</span>
+                      <span className="font-semibold">{facultyAvailability.total} faculty</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Validation Warnings */}
+              {validationWarnings.length > 0 && (
+                <div className="bg-red-50 border border-red-300 rounded-lg p-4">
+                  <h4 className="font-semibold text-red-900 mb-2">⚠️ Configuration Issues</h4>
+                  <ul className="text-xs text-red-800 space-y-1">
+                    {validationWarnings.map((warning, idx) => (
+                      <li key={idx}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* Configuration Summary */}
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Summary</h3>
@@ -360,14 +503,18 @@ const PanelConfiguration = () => {
               <form onSubmit={handleGeneratePanels} className="bg-white rounded-lg shadow-md p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Panels</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Create panels for Semester 5 with the current configuration
+                  Create panels for Semester {semester} with the current configuration
                 </p>
                 <button
                   type="submit"
-                  disabled={isGenerating}
-                  className="w-full bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 transition"
+                  disabled={isGenerating || validationWarnings.length > 0}
+                  className={`w-full text-white py-2 rounded-lg font-medium transition ${
+                    validationWarnings.length > 0
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-green-600 hover:bg-green-700'
+                  } disabled:bg-gray-400`}
                 >
-                  {isGenerating ? 'Generating...' : 'Generate Panels'}
+                  {isGenerating ? 'Generating...' : validationWarnings.length > 0 ? 'Fix Errors First' : 'Generate Panels'}
                 </button>
               </form>
 
@@ -383,6 +530,80 @@ const PanelConfiguration = () => {
                 </ul>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Generated Panels Section */}
+        {panels.length > 0 && (
+          <div className="mt-8">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                Generated Panels for Semester {semester}
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-gray-300">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Panel #</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Members</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Departments</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Conveyer</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {panels.map((panel, idx) => (
+                      <tr key={panel._id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="py-3 px-4">{panel.panelNumber || idx + 1}</td>
+                        <td className="py-3 px-4">
+                          <div className="space-y-1">
+                            {panel.members && panel.members.map((member, i) => (
+                              <div key={i} className="text-xs">
+                                {member.faculty?.fullName || 'Unknown'} 
+                                <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">
+                                  {member.role}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-1">
+                            {panel.members && panel.members.map((member, i) => (
+                              <span key={i} className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-medium">
+                                {member.department}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          {panel.members?.find(m => m.role === 'conveyer')?.faculty?.fullName || '-'}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Active
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Total Panels Generated:</strong> {panels.length} panels for Semester {semester}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {panels.length === 0 && !isLoading && (
+          <div className="mt-8 p-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <p className="text-center text-gray-600">
+              No panels generated yet for Semester {semester}. Configure settings above and click "Generate Panels".
+            </p>
           </div>
         )}
       </div>
